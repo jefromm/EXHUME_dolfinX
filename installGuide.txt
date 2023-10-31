@@ -47,7 +47,7 @@ python3
 * To use EXHUME_X, clone the repo in a directory, then attach a shell to your dolfinx container.
 * Once in the shell, edit the .bashrc to add your repo to the PYTHONPATH:
 
-echo PYTHONPATH='/portal/path/to/repo/EXHUME_dolfinX':$PYTHONPATH >>.bashrc
+echo export PYTHONPATH='/portal/path/to/repo/EXHUME_dolfinX':$PYTHONPATH >>.bashrc
 
 * cd into your repo, then run the bash script to install EXHUME's additional dependencies:
 
