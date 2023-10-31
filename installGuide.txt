@@ -1,0 +1,62 @@
+*------------------------------------------------------------
+* The following document describes the recommended installation of dolfinx 
+* using docker, to be used for the 2023 EXHUME Workshop 
+*
+* Note: The installation process uses bash 
+*------------------------------------------------------------
+
+* To install docker for your machine, see instructions at https://docs.docker.com/engine/install/
+
+
+* Pull the dolfinx docker image: https://hub.docker.com/r/dolfinx/dolfinx
+* (This will take several minutes)
+* to enable visualization of high-order discontinuous spaces, we need at least dolfinx version 0.7.0: 
+
+docker pull dolfinx/dolfinx:v0.7.1
+
+* run docker to create a container 
+* enable file sharing between the container and host system
+* name the container so we can access it later 
+
+docker run -ti -v $(pwd):/portal --name dolfinx_v7_container dolfinx/dolfinx:v0.7.1
+
+* Note: users running Linux distributions with SELinux enabled (Redhat, CentOS, Fedora, and others) 
+* will need to add the :z option to all subsequent host volume mounts -v, e.g.:
+
+docker run -ti -v $(pwd):/portal:z --name dolfinx_v7_container dolfinx/dolfinx:v0.7.1
+
+* This will open a shell inside your container. To exit this shell, use Ctrl-D. 
+* To attach a shell to your existing stopped container:
+
+docker start dolfinx_v7_container
+docker exec -it dolfinx_v7_container /bin/bash
+
+* use the portal we created to access files on your own machine 
+
+cd ../portal 
+
+* confirm you have installed the appropriate version of dolfinx:
+
+python3 
+>>> import dolfinx
+>>> print(dolfinx.__version__)
+
+* You are now ready to run dolfinx! 
+
+*------------------------------------------------------------
+* To use EXHUME_X, clone the repo in a directory, then attach a shell to your dolfinx container.
+* Once in the shell, edit the .bashrc to add your repo to the PYTHONPATH:
+
+echo PYTHONPATH='/portal/path/to/repo/EXHUME_dolfinX':$PYTHONPATH >>.bashrc
+
+* cd into your repo, then run the bash script to install EXHUME's additional dependencies:
+
+cd ../portal/path/to/repo/EXHUME_dolfinX
+bash dockerenv.sh 
+
+* check to see if you can import EXHUME_X:
+
+python3 
+>>>from EXHUME_X.common import *
+
+
