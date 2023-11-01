@@ -19,13 +19,6 @@
             <Normal>-1.0,0</Normal>
         </Geometry>
         
-        <Geometry type="pre_defined" geom="plane"> 
-            <Point>2.0,1.0</Point>
-            <Normal>1.2,0.9</Normal>
-        </Geometry>
-        
-        <PhaseMap>2,0;3,0;6,1;7,1</PhaseMap>
-        
     </Geometries>
     
     <!-- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% -->
