@@ -1,5 +1,5 @@
 from petsc4py import PETSc 
-from dolfinx import cpp, la, fem , io 
+from dolfinx import cpp, la, fem , io, default_scalar_type
 import ufl
 import numpy as np
 import h5py  

@@ -67,6 +67,8 @@ parser.add_argument('--mode',dest='mode',default='strain',
                     help='strain or stress, refering to plane strain or plane stress (default is strain)')
 parser.add_argument('--lr',dest='lr',default=0,
                     help='level of local refinement, for data reporting, default 0')
+parser.add_argument('--ref',dest='ref',default=1,
+                    help='level of global refinement, estimating matrix size, default 1')
 args = parser.parse_args()
 
 k = int(args.k)
@@ -92,11 +94,9 @@ else:
 filenames = [exOpName]
 
 # guess number of bg dofs to pre allocate the matrix size 
-ref = os.getcwd()[-1]
+ref = int(args.ref)
 n = 8*(2**int(ref))
 
-comm = MPI.COMM_WORLD
-nprocs = comm.Get_size()
 bg_dofs_guess = np.ceil(kHat * (2*n**2 + n*1.1))
 
 # cell markers, from mesh file
@@ -263,6 +263,5 @@ H1_net = sum(H1s)
 
 # Only print the error on one process
 if domain.comm.rank == 0:
-    ref = os.getcwd()[-1]
     print(f"L2 Error): {L2_net}")
     print(f"H10 Error: {H1_net}")

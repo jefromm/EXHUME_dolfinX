@@ -63,19 +63,19 @@ def Bottom(x):
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--ku',dest='ku',default=1,
+parser.add_argument('--ku',dest='ku',default=2,
                     help='FG displacement polynomial degree.')
 parser.add_argument('--kHatu',dest='kHatu',default=None,
                     help='Background displacement spline polynomial degree, default to FG degree ku')
 parser.add_argument('--uSpline',dest='uSpline',default=None,
                     help='Background displacement spline T-matrices file')
-parser.add_argument('--kT',dest='kT',default=1,
+parser.add_argument('--kT',dest='kT',default=2,
                     help='FG displacement polynomial degree.')
 parser.add_argument('--kHatT',dest='kHatT',default=None,
                     help='Background temperature spline polynomial degree, default to FG degree ku')
 parser.add_argument('--TSpline',dest='TSpline',default=None,
                     help='Background temperature spline T-matrices file')
-parser.add_argument('--lr',dest='lr',default=0,
+parser.add_argument('--lr',dest='lr',default=1,
                     help='Level of local refinement, for data reporting, default 0')
 parser.add_argument('--mode',dest='mode',default='strain',
                     help='strain or stress, refering to plane strain or plane stress (default is strain)')
@@ -109,7 +109,7 @@ else:
     exit()
 
 # guess number of bg dofs to pre allocate the matrix size 
-ref = os.getcwd()[-1]
+ref = int(lr)
 n = 8*(2**int(ref))
 bg_dofs_guess = 2*np.ceil(kHatu * (2*n**2 + n*1.1)) + np.ceil(kHatT * (2*n**2 + n*1.1))
 
@@ -392,7 +392,7 @@ for subMeshType in mesh_types:
     mu = mus[i]
     domain = domains[i]
 
-    folder =  subMeshType +"/"
+    folder = "results/"+ subMeshType +"/"
 
     U0, U0_to_W = W.sub(0).collapse()
     U1, U1_to_W = W.sub(1).collapse()

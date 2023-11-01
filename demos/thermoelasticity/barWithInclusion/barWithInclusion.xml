@@ -33,25 +33,27 @@
         
         <!-- Define the grids from which the background meshes will be generated and give them an index for identification -->
         <MeshGrids>
-            <MeshGrid ind="0">
+            <MeshGrid ind="0"> <!-- Used for B-spline mesh for Thermal Problem -->
+                <InitialRefinements>0</InitialRefinements>
+                <InterfaceRefinements>1</InterfaceRefinements>
+            </MeshGrid>
+            <MeshGrid ind="1">  <!-- Used for B-spline mesh for Structural Problem -->
                 <InitialRefinements>0</InitialRefinements>
                 <InterfaceRefinements>0</InterfaceRefinements>
             </MeshGrid>
-            <MeshGrid ind="1">
+            <MeshGrid ind="2"> <!-- Used for Foreground mesh -->
                 <InitialRefinements>0</InitialRefinements>
-                <InterfaceRefinements>1</InterfaceRefinements>
+                <InterfaceRefinements>2</InterfaceRefinements>
             </MeshGrid>
         </MeshGrids>
         
         <!-- Define B-spline background meshes for which a basis will be constructed  -->
         <BsplineMeshes>
-            <BsplineMesh ind="0">
+            <BsplineMesh ind="0"> <!-- for Thermal Problem -->
                 <MeshGridIndex>0</MeshGridIndex>
                 <PolynomialOrder>2</PolynomialOrder>
             </BsplineMesh>
-        </BsplineMeshes>
-                <BsplineMeshes>
-            <BsplineMesh ind="1">
+            <BsplineMesh ind="1"> <!-- for Structural Problem -->
                 <MeshGridIndex>1</MeshGridIndex>
                 <PolynomialOrder>2</PolynomialOrder>
             </BsplineMesh>
@@ -62,8 +64,7 @@
     <!-- % Parameters defining the foreground mesh to be generated % -->
     <!-- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% -->
     <ForegroundMesh>
-        <DecompositionGrid>0</DecompositionGrid>
-        <InterfaceRefinements>2</InterfaceRefinements>
+        <DecompositionGrid>2</DecompositionGrid>
         <FgPolynomialOrder>2</FgPolynomialOrder>
         <TriangulateAllFgElems>false</TriangulateAllFgElems>
         <ExtractionOperatorFormat>Elemental</ExtractionOperatorFormat>
