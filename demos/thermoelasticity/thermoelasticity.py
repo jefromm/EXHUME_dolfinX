@@ -67,13 +67,13 @@ parser.add_argument('--ku',dest='ku',default=2,
                     help='FG displacement polynomial degree.')
 parser.add_argument('--kHatu',dest='kHatu',default=None,
                     help='Background displacement spline polynomial degree, default to FG degree ku')
-parser.add_argument('--uSpline',dest='uSpline',default=None,
+parser.add_argument('--uSpline',dest='uSpline',default="Elemental_Extraction_Operators_B0.hdf5",
                     help='Background displacement spline T-matrices file')
 parser.add_argument('--kT',dest='kT',default=2,
                     help='FG displacement polynomial degree.')
 parser.add_argument('--kHatT',dest='kHatT',default=None,
                     help='Background temperature spline polynomial degree, default to FG degree ku')
-parser.add_argument('--TSpline',dest='TSpline',default=None,
+parser.add_argument('--TSpline',dest='TSpline',default="Elemental_Extraction_Operators_B0.hdf5",
                     help='Background temperature spline T-matrices file')
 parser.add_argument('--lr',dest='lr',default=1,
                     help='Level of local refinement, for data reporting, default 0')
