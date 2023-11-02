@@ -33,8 +33,7 @@ def dirichlet_u(u,v,ud,domain,ds,C_u=10):
     return const - adjconst + pen 
 
 def interface_T(T,q,domain,dS,jump,C_T=10):
-    # specify normal directed away from circle 
-    n = ufl.avg(w_inside*ufl.FacetNormal(domain))
+    n = ufl.avg(w_bear*ufl.FacetNormal(domain))
     const = ufl.avg(jump*T) * ufl.dot(custom_avg((kappa*ufl.grad(q)),kappa,domain),n)*dS
     adjconst = ufl.avg(jump*q) * ufl.dot(custom_avg((kappa*ufl.grad(T)),kappa,domain),n)*dS
     gamma = gamma_int(C_T, kappa, domain)
@@ -42,8 +41,7 @@ def interface_T(T,q,domain,dS,jump,C_T=10):
     return const - adjconst + pen 
 
 def interface_u(u,v,domain,dS,jump,C_u=10):
-    # specify normal directed away from circle 
-    n = ufl.avg(w_inside*ufl.FacetNormal(domain))
+    n = ufl.avg(w_bear*ufl.FacetNormal(domain))
     sig_u = sigma(epsU(u))
     sig_v = sigma(epsU(v))
     const = ufl.inner(ufl.avg(jump*u),ufl.dot(custom_avg((sig_v),E,domain),n))*dS
@@ -52,53 +50,36 @@ def interface_u(u,v,domain,dS,jump,C_u=10):
     pen = gamma*ufl.inner(ufl.avg(jump*u),ufl.avg(jump*v))*dS
     return const - adjconst + pen 
 
-def Left(x):
-    return np.isclose(x[0], 0)
-def Right(x):
-    return np.isclose(x[0], 2*L)
-def Top(x):
-    return np.isclose(x[1], L)
-def Bottom(x):
-    return np.isclose(x[1], 0)
-
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--ku',dest='ku',default=2,
                     help='FG displacement polynomial degree.')
-parser.add_argument('--kHatu',dest='kHatu',default=None,
-                    help='Background displacement spline polynomial degree, default to FG degree ku')
 parser.add_argument('--uSpline',dest='uSpline',default="Elemental_Extraction_Operators_B0.hdf5",
                     help='Background displacement spline T-matrices file')
+parser.add_argument('--ulr',dest='ulr',default=0,
+                    help='Level of local refinement on displacemenbt spline mesh')
+
 parser.add_argument('--kT',dest='kT',default=2,
-                    help='FG displacement polynomial degree.')
-parser.add_argument('--kHatT',dest='kHatT',default=None,
-                    help='Background temperature spline polynomial degree, default to FG degree ku')
+                    help='FG Temperature polynomial degree.')
 parser.add_argument('--TSpline',dest='TSpline',default="Elemental_Extraction_Operators_B0.hdf5",
                     help='Background temperature spline T-matrices file')
-parser.add_argument('--lr',dest='lr',default=1,
-                    help='Level of local refinement, for data reporting, default 0')
+parser.add_argument('--Tlr',dest='Tlr',default=1,
+                    help='Level of local refinement on temperature spline mesh')
+
+parser.add_argument('--mm',dest='mm',default=True,
+                    help='strain or stress, refering to plane strain or plane stress (default is strain)')
 parser.add_argument('--mode',dest='mode',default='strain',
                     help='strain or stress, refering to plane strain or plane stress (default is strain)')
 args = parser.parse_args()
 
 
 ku = int(args.ku)
-kHatu=args.kHatu
-if kHatu is None:
-    kHatu = ku 
-else:
-    kHatu = int(args.kHatu)
 kT = int(args.kT)
-kHatT=args.kHatT
-if kHatT is None:
-    kHatT = kT 
-else:
-    kHatT = int(args.kHatT)
-
 uSpline=args.uSpline
 TSpline=args.TSpline
 
-lr = int(args.lr)
+ulr = int(args.ulr)
+Tlr = int(args.Tlr)
 mode = args.mode
 if mode == 'strain':
     plane_stress = False
@@ -107,34 +88,23 @@ elif mode == 'stress':
 else: 
     print("only modes available are stress and strain")
     exit()
+mixedMesh = args.mm
+if mixedMesh or mixedMesh=='True':
+    mixedMesh = True
+    mesh_types = ["tri","quad"]
+else: 
+    # single single tri mesh 
+    mesh_types = ["tri"]
 
 # guess number of bg dofs to pre allocate the matrix size 
-ref = int(lr)
-n = 8*(2**int(ref))
-bg_dofs_guess = 2*np.ceil(kHatu * (2*n**2 + n*1.1)) + np.ceil(kHatT * (2*n**2 + n*1.1))
-
-if uSpline == None:
-    if kHatu == 1:
-        exOpUName = 'Elemental_Extraction_Operators_B0.hdf5'
-    else:
-        exOpUName = 'Elemental_Extraction_Operators_B1.hdf5'
-else: 
-    exOpUName = uSpline
-if TSpline == None:
-    if kHatT == 1:
-        exOpTName = 'Elemental_Extraction_Operators_B0.hdf5'
-    else:
-        exOpTName = 'Elemental_Extraction_Operators_B1.hdf5'
-else: 
-    exOpTName = TSpline
-
-filenames = [exOpUName,exOpUName,exOpTName]
+ref = 0
+n_u = 8*(2**int(ref+ulr))
+n_T = 8*(2**int(ref+Tlr))
+bg_dofs_guess = 2*(2*np.ceil(ku * (2*n_u**2 + n_u*1.1)) + np.ceil(kT* (2*n_T**2 + n_T*1.1)))
+filenames = [uSpline,uSpline,TSpline]
 
 # Domain geometry information
 L = 2.0
-R = 0.75
-centerx = 2.0
-centery = 1.0
 
 # constant heat body load in inclusion only 
 q_right_const = 100.0  # W/m^2 or W/m^3 
@@ -145,15 +115,15 @@ nu = 0.3
 u_dim = 2
 
 #material properties 
-kappa_inside = 1.0 #W/mK
+kappa_bear = 1.0 #W/mK
 kappa_outside = 1.0 #W/mK 
-alpha_inside = 1e-4
+alpha_bear = 1e-4
 alpha_outside = 1e-5
-E_inside = 1.0
+E_bear = 1.0
 E_outside = 1.0
 
 # cell markers, from mesh file
-inside_ID = 0
+bear_ID = 0
 outside_ID = 1
 
 # facet markers, user specified
@@ -163,28 +133,19 @@ left_ID = 2
 right_ID = 3
 interface_ID = 4
 
-facet_markers = [top_ID, bottom_ID, left_ID, right_ID]
-facet_functions = [Top, Bottom, Left, Right]
-num_facet_phases =len(facet_markers)
-
-if lr >= 1: 
-    # we use a for loop to define our linear algebra objects for each submesh 
-    # for visualization, we also need to save each submeshes function space and material parameters 
-    mesh_types = ["tri","quad"]
-    Vs = []
-    As =[]
-    bs = []
-    Ms = []
-    uTs =[]
-    us = []
-    Ts = []
-    alphas = []
-    lams = []
-    mus = []
-    domains = []
-else: 
-    # no local refinement, assume single tri mesh 
-    mesh_types = ["tri"]
+# we use a for loop to define our linear algebra objects for each submesh 
+# for visualization, we also need to save each submeshes function space and material parameters 
+Vs = []
+Ks =[]
+fs = []
+Ms = []
+uTs =[]
+us = []
+Ts = []
+alphas = []
+lams = []
+mus = []
+domains = []
 
 for subMeshType in mesh_types:
     
@@ -202,17 +163,29 @@ for subMeshType in mesh_types:
     cell_mat = ct.values
     
     
-    inside_subdomain = ct.find(inside_ID)
+    bear_subdomain = ct.find(bear_ID)
     outside_subdomain  = ct.find(outside_ID)
 
     dim = domain.topology.dim
     domain.topology.create_connectivity(dim-1, dim)
-    num_facets = domain.topology.index_map(dim-1).size_global
+
+    num_facets = domain.topology.index_map(dim-1).size_local
     f_to_c_conn = domain.topology.connectivity(dim-1,dim)
 
-
-    # mark exterior boundaries using FEniCS function
+    #mark exterior facets for boundary condtions using domain geometry 
+    def Left(x):
+        return np.isclose(x[0], 0)
+    def Right(x):
+        return np.isclose(x[0], 2*L)
+    def Top(x):
+        return np.isclose(x[1], L)
+    def Bottom(x):
+        return np.isclose(x[1], 0)
+    facet_markers = [top_ID, bottom_ID, left_ID, right_ID]
+    facet_functions = [Top, Bottom, Left, Right]
     num_facet_phases =len(facet_markers)
+
+
     facets = np.asarray([],dtype=np.int32)
     facets_mark = np.asarray([],dtype=np.int32)
     for phase in range(num_facet_phases):
@@ -221,40 +194,43 @@ for subMeshType in mesh_types:
         facets= np.hstack((facets,facets_phase))
         facets_mark = np.hstack((facets_mark,facets_phase_mark))
 
-    # add interface facets to list
+    # find  interface facets with cell material data 
     interface_facets = getInterfaceFacets(f_to_c_conn, num_facets, cell_mat)
     interface_facet_marks = interface_ID*np.ones_like(interface_facets)
+
+    #create mesh function with facet marks
     facets= np.hstack((facets,interface_facets))
     facets_mark = np.hstack((facets_mark,interface_facet_marks))
     sorted_facets = np.argsort(facets)
-
     ft = mesh.meshtags(domain,dim-1,facets[sorted_facets], facets_mark[sorted_facets])
 
     #create weight function to control integration on the interior surface 
     V_DG = fem.FunctionSpace(domain, ("DG", 0))
-    w_inside = fem.Function(V_DG)
-    w_inside.x.array[inside_subdomain] = 2
-    w_inside.x.array[outside_subdomain] = 0
-    w_inside.x.scatter_forward()
+    w_bear = fem.Function(V_DG)
+    w_bear.x.array[bear_subdomain] = 2
+    w_bear.x.array[outside_subdomain] = 0
+    w_bear.x.scatter_forward()
 
     # create DG function to calculate the jump 
     # Using the notation from (Schmidt 2023), the interior is material m and the exterior is n 
     # jump == [[.]] = (.)^m - (.)^n 
     jump = fem.Function(V_DG)
-    jump.x.array[inside_subdomain] = 2
+    jump.x.array[bear_subdomain] = 2
     jump.x.array[outside_subdomain] = -2
     jump.x.scatter_forward()
 
     # define integration measurements for the domain of interest and the interior surface of interest
     dx = ufl.Measure('dx',domain=domain,subdomain_data=ct,metadata={'quadrature_degree': 2*ku})
+    #lowercase s- exterior facets
     ds = ufl.Measure("ds",domain=domain,subdomain_data=ft,metadata={'quadrature_degree': 2*ku})
-    ds_exterior = ds(right_ID) + ds(left_ID) + ds(top_ID) + ds(bottom_ID)
+    #uppercase S- interior facets
     dS = ufl.Measure("dS",domain=domain,subdomain_data=ft,metadata={'quadrature_degree': 2*ku})
 
+
+    # define FG mixed element space 
     el_u = ufl.FiniteElement("DG", domain.ufl_cell(),ku)
     el_T = ufl.FiniteElement("DG", domain.ufl_cell(),kT)
     mel = ufl.MixedElement([el_u, el_u, el_T])
-
     V = fem.FunctionSpace(domain, mel)
     no_fields = 3 
 
@@ -267,17 +243,17 @@ for subMeshType in mesh_types:
 
     # define material properties
     kappa = fem.Function(V_DG)
-    kappa.x.array[inside_subdomain] = kappa_inside
+    kappa.x.array[bear_subdomain] = kappa_bear
     kappa.x.array[outside_subdomain] = kappa_outside
     kappa.x.scatter_forward()
 
     E = fem.Function(V_DG)
-    E.x.array[inside_subdomain] = E_inside
+    E.x.array[bear_subdomain] = E_bear
     E.x.array[outside_subdomain] = E_outside
     E.x.scatter_forward()
     
     alpha = fem.Function(V_DG)
-    alpha.x.array[inside_subdomain] = alpha_inside
+    alpha.x.array[bear_subdomain] = alpha_bear
     alpha.x.array[outside_subdomain] = alpha_outside
     alpha.x.scatter_forward()
     
@@ -292,25 +268,29 @@ for subMeshType in mesh_types:
 
 
     # define residuals 
-    res_T = kappa* ufl.inner(ufl.grad(q),ufl.grad(T))*( dx(inside_ID)+dx(outside_ID))\
+    # heat equation: 
+    res_T = kappa* ufl.inner(ufl.grad(q),ufl.grad(T))*( dx(bear_ID)+dx(outside_ID))\
           - ufl.inner(q,q_right)*((ds(right_ID) ))    
-    epsE = epsU(u) - epsT(T,alpha)
-    res_u = ufl.inner(epsU(v),sigma(epsE))*(dx(inside_ID) + dx(outside_ID))
-    resD_u_l = dirichlet_u(u,v,u_left,domain,ds(left_ID))
-    resD_T_l = dirichlet_T(T,q,T_left,domain,ds(left_ID))
 
+    # linear elasticity 
+    epsE = epsU(u) - epsT(T,alpha)
+    res_u = ufl.inner(epsU(v),sigma(epsE))*(dx(bear_ID) + dx(outside_ID))
+    
+    # dirichlet BC on left side 
+    resD_u = dirichlet_u(u,v,u_left,domain,ds(left_ID))
+    resD_T = dirichlet_T(T,q,T_left,domain,ds(left_ID))
+
+    # interface conditions 
     resI_T = interface_T(T,q,domain,dS(interface_ID),jump,C_T=100)
     resI_u = interface_u(u,v,domain,dS(interface_ID),jump,C_u=100)
 
-    res = res_u 
-    res += res_T 
-    res += resI_T 
-    res += resI_u 
-    res += resD_u_l 
-    res += resD_T_l 
+    # sum residuals
+    res = res_u + res_T + resI_T + resI_u + resD_T + resD_u 
 
     # use automatic differentiation to compute the Gateux derivative 
     J = ufl.derivative(res,uT)
+
+    # assemble forms into PETSc objects 
     res_form = fem.form(res)
     res_petsc = fem.petsc.assemble_vector(res_form)
     J_form = fem.form(J)
@@ -318,20 +298,18 @@ for subMeshType in mesh_types:
     J_petsc.assemble()
     res_petsc.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
     res_petsc.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
-
     sizes = res_petsc.getSizes()
 
     #read in mesh extraction operator 
     M = readExOpElementwise(V,filenames,idt,domain,sizes,type=subMeshType,bg_size=bg_dofs_guess)
-    u_petsc = J_petsc.createVecLeft()
 
     # assemble linear system 
-    A,b = assembleLinearSystemBackground(J_petsc,-res_petsc,M)
+    K,f = assembleLinearSystemBackground(J_petsc,-res_petsc,M)
 
     # save submesh parameters for plotting 
     Vs +=[V]
-    As += [A]
-    bs += [b]
+    Ks += [K]
+    fs += [f]
     Ms += [M]
     uTs += [uT]
     us += [u]
@@ -341,32 +319,31 @@ for subMeshType in mesh_types:
     mus += [mu]
     domains += [domain]
 
-if lr >= 1:
+if mixedMesh:
     # access submesh quantities 
-    A_tri,A_quad = As
-    b_tri,b_quad = bs
+    K_tri,K_quad = Ks
+    f_tri,f_quad = fs
     M_tri,M_quad = Ms
     uT_tri,uT_quad = uTs
 
     # add the two matrices
-    A_tri.axpy(1.0,A_quad)
-    b_tri.axpy(1.0,b_quad)
-    x = A_tri.createVecLeft()
+    K_tri.axpy(1.0,K_quad)
+    f_tri.axpy(1.0,f_quad)
+    x = K_tri.createVecLeft()
 
-
-    #solveKSP(A_tri,b_tri,x,monitor=False,method='gmres',rtol=1E-15, atol=1E-15)
-    solveKSP(A_tri,b_tri,x,monitor=False,method='mumps')
+    solveKSP(K_tri,f_tri,x,monitor=False,method='mumps')
 
     transferToForeground(uT_tri, x, M_tri)
     transferToForeground(uT_quad, x, M_quad)
 else:
-    A = As[0]
-    b = bs[0]
+    # single triangular mesh
+    K = Ks[0]
+    f = fs[0]
     M = M[0]
     uT = uTs[0]
 
-    x = A.createVecLeft()
-    solveKSP(A,b,x,monitor=False,method='mumps')
+    x = K.createVecLeft()
+    solveKSP(K,f,x,monitor=False,method='mumps')
     transferToForeground(uT, x, M)
 
 

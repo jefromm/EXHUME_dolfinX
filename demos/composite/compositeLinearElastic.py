@@ -48,34 +48,28 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('--k',dest='k',default=1,
                     help='FG polynomial degree.')
-parser.add_argument('--kHat',dest='kHat',default=None,
-                    help='Background spline polynomial degree, default to FG degree ku')
-parser.add_argument('--spline',dest='spline',default=None,
+parser.add_argument('--spline',dest='spline',default='Elemental_Extraction_Operators_B0.hdf5',
                     help='Background spline T-matrices file')
 parser.add_argument('--mode',dest='mode',default='strain',
                     help='strain or stress, refering to plane strain or plane stress (default is strain)')
 parser.add_argument('--lr',dest='lr',default=0,
                     help='level of local refinement, for data reporting, default 0')
+parser.add_argument('--tri',dest='tri',default=False,
+                    help='level of local refinement, for data reporting, default 0')
 args = parser.parse_args()
 
 k = int(args.k)
-kHat=args.kHat
 spline=args.spline
 lr = int(args.lr)
 mode = args.mode
 
-if kHat is None:
-    kHat = k 
-else:
-    kHat = int(args.kHat)
-
-if spline == None:
-    if kHat == 1:
-        exOpName = 'Elemental_Extraction_Operators_B0.hdf5'
-    else:
-        exOpName = 'Elemental_Extraction_Operators_B1.hdf5'
+allTris = args.tri
+if allTris == "True":
+    allTris = True
 else: 
-    exOpName = spline
+    allTris = False 
+
+exOpName = spline
 
 if mode == 'strain':
     plane_stress = False
@@ -87,11 +81,12 @@ else:
 
 
 # guess number of bg dofs to pre allocate the matrix size 
-ref = os.getcwd()[-1]
+ref = 3 + int(lr)
 n = 10*(2**int(ref))
-bg_dofs_guess = np.ceil(kHat * (2*n**2 + n*1.1))
-filenames = [exOpName,exOpName]
 no_fields = 2
+bg_dofs_guess = no_fields* np.ceil(k* (n**2 + n*1.1))
+filenames = [exOpName,exOpName]
+
 
 # Domain geometry information
 L = 1.6e-3
@@ -122,20 +117,21 @@ u_bottom = ufl.as_vector([0.0,0.0])
 facet_markers = [top_ID, bottom_ID, left_ID, right_ID]
 facet_functions = [Top, Bottom, Left, Right]
 
-if lr >= 1: 
+Ws = []
+As =[]
+bs = []
+Ms = []
+domains = []
+us = []
+
+alphas = []
+lams = []
+mus = []
+
+if not allTris: 
     # we use a for loop to define our linear algebra objects for each submesh 
     # for visualization, we also need to save each submeshes function space and material parameters 
     mesh_types = ["tri","quad"]
-    Ws = []
-    As =[]
-    bs = []
-    Ms = []
-    domains = []
-    us = []
-
-    alphas = []
-    lams = []
-    mus = []
 else: 
     # no local refinement, assume single tri mesh 
     mesh_types = ["tri"]
@@ -270,7 +266,7 @@ for subMeshType in mesh_types:
     lams += [lam]
     mus += [mu]
 
-if lr>= 1:
+if not allTris:
     W_tri, W_quad = Ws
     A_tri,A_quad = As
     b_tri,b_quad = bs
@@ -295,7 +291,7 @@ if lr>= 1:
 else: 
     A = As[0]
     b = bs[0]
-    M = M[0]
+    M = Ms[0]
     u = us[0]
     x = A.createVecLeft()
     solveKSP(A,b,x,monitor=False,method='mumps')
