@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- All parameters are nested under this root -->
+<MeshGenerationParameterList>
+
+    <!-- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% -->
+    <!-- % Parameters defining the Geometries to be used % -->
+    <!-- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% -->
+    <Geometries>
+    
+        <Geometry type="image_file"> 
+            <FileName>composite.hdf5</FileName>
+            <ImageDimensions>0.0016,0.0016</ImageDimensions>
+            <ImageOrigin>0.0,0.0</ImageOrigin>
+        </Geometry>
+
+    </Geometries>
+    
+    <!-- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% -->
+    <!-- % Parameters defining the background meshes to be used % -->
+    <!-- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% -->
+    <BackgroundMeshes>
+
+        <!-- Define a uniform grid all grids and meshes will be derived from -->
+        <BaseGrid>
+            <Size>10,10</Size>
+            <Dimensions>0.0016,0.0016</Dimensions>
+            <Origin>0.0,0.0</Origin>
+        </BaseGrid>
+        
+        <!-- Define the grids from which the background meshes will be generated and give them an index for identification -->
+        <MeshGrids>
+            <MeshGrid ind="0">
+                <InterfaceRefinements>0</InterfaceRefinements>
+                <InitialRefinements>3</InitialRefinements>
+            </MeshGrid>
+            <MeshGrid ind="1">
+                <InterfaceRefinements>1</InterfaceRefinements>
+                <InitialRefinements>3</InitialRefinements>
+            </MeshGrid>
+            <MeshGrid ind="2">
+                <InterfaceRefinements>2</InterfaceRefinements>
+                <InitialRefinements>3</InitialRefinements>
+            </MeshGrid>
+        </MeshGrids>
+        
+        <!-- Define B-spline background meshes for which a basis will be constructed  -->
+        <BsplineMeshes>
+            <BsplineMesh ind="0">
+                <MeshGridIndex>1</MeshGridIndex>
+                <PolynomialOrder>1</PolynomialOrder>
+            </BsplineMesh>
+            <BsplineMesh ind="1">
+                <MeshGridIndex>1</MeshGridIndex>
+                <PolynomialOrder>2</PolynomialOrder>
+            </BsplineMesh>
+        </BsplineMeshes>
+ 
+    </BackgroundMeshes>
+    
+    <!-- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% -->
+    <!-- % Parameters defining the foreground mesh to be generated % -->
+    <!-- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% -->
+    <ForegroundMesh>
+        <DecompositionGrid>2</DecompositionGrid>
+        <FgPolynomialOrder>2</FgPolynomialOrder>
+        <TriangulateAllFgElems>false</TriangulateAllFgElems>
+        <ExtractionOperatorFormat>Elemental</ExtractionOperatorFormat>
+        <OutputDecompositionGrid>true</OutputDecompositionGrid>
+    </ForegroundMesh>
+
+</MeshGenerationParameterList>
